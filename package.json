@@ -1,0 +1,22 @@
+{
+  "name": "rag-agent",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "agent": "npx tsx src/agent.ts",
+    "sync": "npx tsx src/sync.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "dotenv": "^16.5.0",
+    "openai": "^4.98.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "yocto-spinner": "^0.2.2",
+    "zod": "^3.24.4"
+  }
+}
