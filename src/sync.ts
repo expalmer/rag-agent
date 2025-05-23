@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { saveDocument, supabase, updateChatMessagesToEmbedded } from "./db";
 import { runLLMEmbedding } from "./llm";
 import type { ChatMessage } from "./types";
