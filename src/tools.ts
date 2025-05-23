@@ -4,12 +4,11 @@ import { z } from "zod";
 import {
   deleteAllBannedUser,
   deleteBannedUser,
-  getBannedUsers,
   getMatchedDocuments,
   insertBannedUser,
   saveChatMessage,
 } from "./db";
-import { runLLMEmbedding } from "./llm";
+import { runLLMCompletions, runLLMEmbedding } from "./llm";
 
 const banUserTool = {
   name: "banUser",
@@ -60,17 +59,28 @@ const liftAllBans = async (toolArgs: Record<string, unknown>) => {
 
 const protectUserTool = {
   name: "protectUser",
-  // proteger usuario daqueles que estão falando mal dele
-  // en: "Protect a user from those who are talking bad about him",
   description: "Protect an user from those who are talking bad about him",
   parameters: z.object({
-    comment: z.string().describe(`The comment to protect the user from.`),
+    username: z.string().describe(`The username of the person to protect.`),
   }),
 };
 
 const protectUser = async (toolArgs: Record<string, unknown>) => {
-  const { comment = "" } = toolArgs;
-  await saveChatMessage("@john.doe", comment as string);
+  const { username = "" } = toolArgs;
+
+  const message = await runLLMCompletions([
+    {
+      role: "user",
+      content: `
+      Você um usuário do chat e está vendo que alguém está falando mal de um usuário que é seu colega.
+      Alguém está falando sobre ${username}. 
+      Você deve responder com uma mensagem curta falando bem de ${username}, 
+      escreva de forma natural, como se você estivesse falando com um amigo.
+      Não pode ser algo que não faça sentido. A mensagem deve ser curta e direta.`,
+    },
+  ]);
+
+  await saveChatMessage("@john.doe", message.content as string);
   return `O comentário de proteção foi salvo com sucesso. Avisa isso de forma bem séria e formal`;
 };
 
@@ -99,8 +109,6 @@ const areYouTalkingAboutSomeoneInTheChat = async (
     return `Não, ${username} não está sendo mencionado por ninguém.`;
   }
 
-  // const bannedUsers = await getBannedUsers();
-
   const matchedContent = matchedDocuments.map((doc) => {
     const regex = /(?<username>[^:]+): (?<message>.+)/;
     const match = doc.content.match(regex);
@@ -116,16 +124,6 @@ const areYouTalkingAboutSomeoneInTheChat = async (
       comentário: ${message};`;
   });
 
-  // const bannedMessage = bannedUsers?.length
-  //   ? `
-  //   Mas primeiro, verifica se eles já estão banidos.
-  //   Se sim, só informe que eles estão banidos e não faça nada.
-  //   Aqui abaixo estão os usuários banidos:
-  //   ---
-  //   ${bannedUsers.map((user) => user.username).join(", ")}
-  //   --- `
-  //   : "";
-  // Se sim, quero que chame a função (banUser) para banir esses usuários.
   return `
     Abaixo estão as mensagens de usuários que mencionam ${username}:
     ---
@@ -136,41 +134,11 @@ const areYouTalkingAboutSomeoneInTheChat = async (
   `;
 };
 
-// const whatAreTheyTalkingAboutTool = {
-//   name: "whatAreTheyTalkingAbout",
-//   description: "What are they talking about? Is it good or bad?",
-//   parameters: z.object({
-//     isBad: z.boolean().describe(`Is it bad?`),
-//     comment: z.string().describe(`The comment.`),
-//     username: z
-//       .string()
-//       .describe(`The username of the person you are talking about.`),
-//   }),
-// };
-
-// const whatAreTheyTalkingAbout = async (
-//   toolArgs: Record<string, unknown>,
-//   userMessage: ChatCompletionUserMessageParam
-// ) => {
-//   const { isBad, username, comment } = toolArgs;
-//   return `
-//     Abaixo está a mensagem
-//     ---
-//     ${matchedContent.join("\n")}
-//     ---
-//     Quero que verifique se estão falando mal de ${username}.
-//     Se sim, quero que chame a função (banUser) para banir esses usuários.
-//     E se solicitado, proteja ${username} de quem está falando mal dele chamando a função (protectUser), e como vai fazer isso será:
-//     - Passando como argumento um comentário que você vai criar para proteger ${username} de quem está falando mal dele.
-//     Caso não tenha nada de ruim, apenas me diga sobre o que estão falando de bom.
-//   `;
-// };
-
 export const tools = [
   banUserTool,
   liftTheBanTool,
   liftAllBansTool,
-  // protectUserTool,
+  protectUserTool,
   areYouTalkingAboutSomeoneInTheChatTool,
 ];
 
